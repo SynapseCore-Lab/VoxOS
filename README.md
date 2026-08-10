@@ -266,7 +266,7 @@ Jarvis OS
     └── Browser Automation
 
 ```
-#🛠️ Tech Stack
+## 🛠️ Tech Stack
 
 Technology	Purpose
 ```
