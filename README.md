@@ -68,14 +68,14 @@ How It Works
 Core Goals
 Vox OS is being built around these principles:
 
-🎙️ Natural voice interaction
-🧠 AI-powered intent understanding
-⚡ Fast command processing
-🖥️ Windows automation
-🧩 Modular architecture
-🔌 Extensible tool system
-🔐 Safe system-level execution
-🚀 Dynamic application control
+- 🎙️ Natural voice interaction
+- 🧠 AI-powered intent understanding
+- ⚡ Fast command processing
+- 🖥️ Windows automation
+- 🧩 Modular architecture
+- 🔌 Extensible tool system
+- 🔐 Safe system-level execution
+- 🚀 Dynamic application control
 
 ## 🎙️ Voice Processing Pipeline
 
