@@ -115,6 +115,7 @@ human speech into a command that can be understood and executed by the system.
 │ "Open Chrome"   │
 └─────────────────┘
 
+```
 
  Why sounddevice?
 
@@ -151,6 +152,7 @@ The AI decides **what the user wants**, while the execution layer decides **how 
 
 ## 🔄 Intent Processing
 
+```text
 Natural Language
        │
        ▼
@@ -163,6 +165,7 @@ Natural Language
           │
           ▼
    Structured Intent
+```
 # 🧩 Dynamic Application Control
 
 Jarvis is designed to understand **what the user wants to do** separately from **how the action is executed**.
@@ -170,7 +173,7 @@ Jarvis is designed to understand **what the user wants to do** separately from *
 This allows the system to support applications dynamically instead of requiring a separate Python script for every application.
 
 ## 🔄 Command Execution Pipeline
-
+```text
 Natural Language
        │
        ▼
@@ -210,7 +213,7 @@ Natural Language
 │    Execution     │
 └──────────────────┘
 A major architectural goal is to avoid creating a separate Python file for every application.
-
+```
 Instead of:
 
 ❌ chrome.py
@@ -220,7 +223,7 @@ Instead of:
 ❌ notepad.py
 
 Jarvis is being designed around a generic application resolver:
-
+```text
 User Command
      ↓
 Intent Detection
@@ -232,11 +235,11 @@ Application Discovery
 Windows Execution
 
 This makes the system easier to scale as more applications and capabilities are added.
-
+```
 🏗️ Architecture
 
 The backend is being designed using a modular architecture:
-
+```text
 Jarvis OS
 │
 ├── Voice Layer
@@ -261,7 +264,8 @@ Jarvis OS
     ├── Application Control
     ├── File Operations
     └── Browser Automation
-    
+
+```
 🛠️ Tech Stack
 Technology	Purpose
 🐍 Python	Backend, AI integration & automation
@@ -274,6 +278,7 @@ Technology	Purpose
 🪟 Windows APIs	System automation
 🔧 Git	Version control
 🌐 GitHub	Collaboration & source control
+```text
 📁 Project Structure
 Jarvis_OS/
 │
@@ -296,7 +301,7 @@ Jarvis_OS/
 │
 ├── .gitignore
 └── README.md
-
+```
 The project structure will evolve as new capabilities are implemented.
 
 🚀 Getting Started
@@ -323,12 +328,14 @@ powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | ie
 Restart your terminal and verify:
 
 uv --version
+
 4. Install Python 3.13
 uv python install 3.13
 
 Pin the project:
 
 uv python pin 3.13
+
 5. Create the Virtual Environment
 uv venv --python 3.13
 
@@ -343,6 +350,7 @@ python --version
 Expected:
 
 Python 3.13.x
+
 6. Install Dependencies
 uv sync
 
@@ -454,7 +462,7 @@ Phase 6 — Jarvis
 Separation of Concerns
 
 Each layer should have one clear responsibility:
-
+```text
 Voice
   ↓
 Text
