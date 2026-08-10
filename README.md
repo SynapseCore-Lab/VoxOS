@@ -8,7 +8,7 @@
 
 <br>
 
-![Python](https://img.shields.io/badge/Python-3.13-3776AB?style=for-the-badge&logo=python&logoColor=white)
+![Python](https://img.shields.io/badge/Python-3.14-3776AB?style=for-the-badge&logo=python&logoColor=white)
 ![uv](https://img.shields.io/badge/uv-Package%20Manager-DE5FE9?style=for-the-badge)
 ![Windows](https://img.shields.io/badge/Platform-Windows-0078D4?style=for-the-badge&logo=windows&logoColor=white)
 ![Status](https://img.shields.io/badge/Status-Under%20Development-orange?style=for-the-badge)
@@ -19,17 +19,16 @@
 
 ---
 
-# 🧠 About The Project
+## 🧠 About The Project
 
-**Vox OS** is an AI-powered desktop assistant designed to allow users to control their computer using natural voice commands.
+**Vox OS** is an AI-powered desktop assistant designed to allow users to control their computer using natural voice commands. Instead of navigating through applications manually, users can interact with their computer conversationally.
 
-Instead of navigating through applications manually, users can interact with their computer conversationally.
+### How It Works
 
-How It Works
-
+```text
                  🎙️ USER
-                    │
-                    ▼
+                  │
+                  ▼
           ┌──────────────────┐
           │  Audio Capture   │
           │   sounddevice    │
@@ -48,8 +47,8 @@ How It Works
                    │
                    ▼
           ┌──────────────────┐
-          │   AI / Intent    │
-          │     Engine       │
+          │    AI / Intent   │
+          │      Engine      │
           └────────┬─────────┘
                    │
                    ▼
@@ -59,29 +58,36 @@ How It Works
                    │
         ┌──────────┼──────────┐
         ▼          ▼          ▼
-     🖥️ System   📱 Apps    🌐 Web
+      🖥️ System   📱 Apps    🌐 Web
         │          │          │
         └──────────┼──────────┘
                    ▼
-             💻 WINDOWS
+              💻 WINDOWS
+```
 
-## Core Goals
+## 🎯 Core Goals
 
 Vox OS is being built around these principles:
-
 - 🎙️ Natural voice interaction
+
 - 🧠 AI-powered intent understanding
-- ⚡ Fast command processing
+
+- ⚡ Fast command processing (Zero-latency architecture)
+
 - 🖥️ Windows automation
+
 - 🧩 Modular architecture
+
 - 🔌 Extensible tool system
+
 - 🔐 Safe system-level execution
+
 - 🚀 Dynamic application control
 
 ## 🎙️ Voice Processing Pipeline
 
-The Jarvis voice engine is designed as a modular pipeline that converts
-human speech into a command that can be understood and executed by the system.
+The Vox OS voice engine is designed as a modular pipeline that converts human speech into a command that can be understood and executed by the system.
+
 ```text
 🎤 Microphone
       │
@@ -115,46 +121,15 @@ human speech into a command that can be understood and executed by the system.
 │                 │
 │ "Open Chrome"   │
 └─────────────────┘
-
 ```
 
- ### Why sounddevice?
+### Why sounddevice?
 
-###### sounddevice provides Python access to the computer's audio devices through PortAudio.
+sounddevice provides Python access to the computer's audio devices through PortAudio. It is responsible for microphone input, audio output, and real-time audio callbacks. It does not perform speech recognition. Speech recognition and AI processing happen asynchronously in later layers.
 
-It is responsible for:
+## 🧠 AI Intent Engine
 
-- 🎤 Microphone input
-- 🔊 Audio output
-- 🎧 Audio streams
-- ⚡ Real-time audio callbacks
-
-***It is important to understand that sounddevice does not perform speech recognition.***
-
-Its responsibility is the audio layer:
-
-```text
-Microphone
-    ↓
-sounddevice
-    ↓
-Audio Data
-
-```
-
-Speech recognition and AI processing happen in later layers.
-
-# 🧠 AI Intent Engine
-
-The **AI Intent Engine** is the reasoning layer of Jarvis OS.
-
-Its primary responsibility is to transform natural-language input into a **structured, machine-readable intent** that the Command Layer can safely process.
-
-The AI decides **what the user wants**, while the execution layer decides **how to perform it**.
-
----
-
-## 🔄 Intent Processing
+The **AI Intent Engine** is the reasoning layer of Vox OS. Its primary responsibility is to transform natural-language input into a **structured**, **machine-readable intent** that the **Command Layer** can safely process. The AI decides what the user wants, while the execution layer decides how to perform it.
 
 ```text
 Natural Language
@@ -170,82 +145,23 @@ Natural Language
           ▼
    Structured Intent
 ```
-# 🧩 Dynamic Application Control
 
-Jarvis is designed to understand **what the user wants to do** separately from **how the action is executed**.
+## 🧩 Dynamic Application Control
 
-This allows the system to support applications dynamically instead of requiring a separate Python script for every application.
+Vox OS is designed to understand what the user wants to do separately from how the action is executed. This allows the system to support applications dynamically instead of requiring a hardcoded Python script for every application.
 
-## 🔄 Command Execution Pipeline
+Instead of writing chrome.py, spotify.py, or vscode.py, Vox OS is designed around a generic application resolver:
+
 ```text
-Natural Language
-       │
-       ▼
-┌──────────────────┐
-│  Intent Engine   │
-│                  │
-│ Understand what  │
-│ the user wants   │
-└────────┬─────────┘
-         │
-         ▼
-┌──────────────────┐
-│ Command Router   │
-│                  │
-│ Select required  │
-│ capability       │
-└────────┬─────────┘
-         │
-         ▼
-┌──────────────────┐
-│ Tool / Capability│
-│                  │
-│ Perform the      │
-│ required action  │
-└────────┬─────────┘
-         │
-         ▼
-┌──────────────────┐
-│    Validation    │
-│                  │
-│ Check whether    │
-│ action is safe   │
-└────────┬─────────┘
-         │
-         ▼
-┌──────────────────┐
-│    Execution     │
-└──────────────────┘
-A major architectural goal is to avoid creating a separate Python file for every application.
+User Command ➔ Intent Detection ➔ Application Resolver ➔ Windows Execution
 ```
-Instead of:
 
-- ❌ chrome.py
-- ❌ spotify.py
-- ❌ discord.py
-- ❌ vscode.py
-- ❌ notepad.py
-
-Jarvis is being designed around a generic application resolver:
-```text
-User Command
-     ↓
-Intent Detection
-     ↓
-Application Resolver
-     ↓
-Application Discovery
-     ↓
-Windows Execution
-
-This makes the system easier to scale as more applications and capabilities are added.
-```
 # 🏗️ Architecture
 
-The backend is being designed using a modular architecture:
+The backend is built using a strict modular monolith architecture communicating via an asynchronous event bus:
 
-```text
-Jarvis OS
+``` text
+Vox OS
 │
 ├── Voice Layer
 │   ├── Audio Capture
@@ -271,376 +187,117 @@ Jarvis OS
     └── Browser Automation
 
 ```
+
 ## 🛠️ Tech Stack
 
-Technology	Purpose
-```
-🐍 Python	Backend, AI integration & automation
-⚡ uv	Python package & environment management
-🎤 sounddevice	Audio input/output
-🔢 NumPy	Audio & numerical processing
-🧠 AI / LLM	Intent understanding
-🗣️ Speech-to-Text	Voice recognition
-🔊 Text-to-Speech	Voice responses
-🪟 Windows APIs	System automation
-🔧 Git	Version control
-🌐 GitHub	Collaboration & source control
-
-📁 Project Structure
-Jarvis_OS/
-│
-├── backend/
-│   │
-│   ├── app/
-│   │   ├── core/
-│   │   ├── voice/
-│   │   ├── ai/
-│   │   ├── commands/
-│   │   └── automation/
-│   │
-│   ├── tests/
-│   │
-│   ├── main.py
-│   ├── pyproject.toml
-│   └── uv.lock
-│
-├── frontend/
-│
-├── .gitignore
-└── README.md
-```
-The project structure will evolve as new capabilities are implemented.
+| Technology | Purpose |
+|---|---|
+| 🐍 **Python** | Backend, AI integration & automation |
+| ⚡ **uv** | Blazing-fast Python package & environment management |
+| 🎤 **sounddevice** | Zero-latency audio input/output |
+| 🔢 **NumPy** | Audio & numerical processing |
+| 🧠 **Local LLMs** | Intent understanding |
+| 🗣️ **faster-whisper** | Real-time Speech-to-Text |
+| 🪟 **Windows APIs** | Deep system automation |
 
 ## 🚀 Getting Started
 
 Prerequisites
-
-Make sure you have:
-
 - Windows 10 / 11
-- Python 3.13
+
+- Python 3.14
+
 - Git
+
 - PowerShell
--  uv
-1. Clone the Repository
-```
-git clone [https://github.com/SynapseCore-Lab/VoxOS](https://github.com/SynapseCore-Lab/VoxOS)
-```
-```
-cd Vox_OS
+
+- uv Package Manager
+
+1. Clone & Setup
 
 ```
-2. Open the Backend
+git clone https://github.com/SynapseCore-Labs/VoxOS
+cd VoxOS/backend
 ```
-cd backend
-```
-3. Install uv
 
-On Windows PowerShell:
+2. Install uv (If you don't have it)
+
 ```
 powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
-
 ```
 
-Restart your terminal and verify:
-```
-uv --version
-```
-
-4. Install Python 3.14
-
-```
-uv python install 3.14
-
-```
-
-Pin the project:
+3. Setup Environment
 ```
 uv python pin 3.14
-```
-5. Create the Virtual Environment
-```
 uv venv
 ```
 
-6. Activate it:
+Activate the environment:
 ```
 .venv\Scripts\Activate.ps1
 ```
-Verify:
-```
-python --version
-```
-Expected:
 
-Python 3.13.x
-
-7. Install Dependencies
+4. Install Dependencies
 ```
 uv sync
 ```
-To add a new dependency:
-```
-uv add <package-name>
-```
-For example:
-```
-uv add sounddevice
-uv add numpy
-```
 
-8. 🎧 Test Audio Devices
-
-After installing sounddevice, check the available microphone and speaker devices:
-
-```
-python -c "import sounddevice as sd; print(sd.query_devices())"
-```
-9. Test the package:
-```
-python -c "import sounddevice; print(sounddevice.__version__)"
-```
-If your microphone appears in the device list, the Python audio layer is communicating with Windows successfully.
-
-▶️ Run Jarvis
-
-From the backend directory:
+5. Run Vox OS
 ```
 uv run main.py
 ```
 
-The application entry point may change as the architecture evolves.
+## 🔐 Security First
 
-# 🔐 Security
+Vox OS is designed to interact directly with the user's computer. The AI will never blindly execute arbitrary commands. Potentially sensitive operations (Deleting files, transferring money, formatting) require explicit voice or keyboard confirmation.
 
-Jarvis is designed to interact directly with the user's computer.
-
-Because of this, security is a core architectural requirement.
-
-The AI should never blindly execute arbitrary commands.
-
-Potentially sensitive operations should go through validation and, when necessary, explicit user confirmation.
-
-                 AI Decision
+```text
+AI Decision
                       │
                       ▼
-               Safety Check
+                 Safety Check
                       │
              ┌────────┴────────┐
              │                 │
-           Safe             Sensitive
+           Safe            Sensitive
              │                 │
              ▼                 ▼
-          Execute          Ask User
-
-Examples:
-```text
-🗑️ Delete files
-   → Confirmation
-
-🔑 Run privileged command
-   → Confirmation
-
-⚙️ Modify system configuration
-   → Confirmation
-
-🌐 Open website
-   → Normal execution
-🗺️ Roadmap
-Phase 1 — Foundation
- Python backend
- uv project setup
- Virtual environment
- Microphone integration
- sounddevice
- Audio streaming
-
-Phase 2 — Voice Engine
- Voice Activity Detection
- Wake-word detection
- Speech-to-Text
- Text-to-Speech
-
-Continuous listening
-Phase 3 — AI Brain
- Intent recognition
- Context management
- Command planning
- Tool selection
- Conversation memory
-
-Phase 4 — Computer Control
- Application launcher
- Application discovery
- Window management
- File management
- Browser automation
- Screenshot functionality
- System information
-
-Phase 5 — Advanced Agent
- Tool registry
- Plugin architecture
- Dynamic application resolution
- Multi-step task execution
- Context-aware automation
- User-defined commands
-
-Phase 6 — Jarvis
- Persistent assistant
- Background operation
- Personal workflows
- Advanced task planning
- Local/offline capabilities
-🧪 Engineering Principles
-```
-## Separation of Concerns
-
-Each layer should have one clear responsibility:
-```text
-Voice
-  ↓
-Text
-  ↓
-Intent
-  ↓
-Tool
-  ↓
-Execution
-```
-## Modular Architecture
-
-Individual components should be replaceable without rewriting the entire system.
-
-For example:
-```text
-Audio Layer
-     ↓
-Speech Layer
-     ↓
-AI Layer
-     ↓
-Command Layer
-     ↓
-Automation Layer
-```
-## Dynamic Over Hard-Coded
-
-The system should prefer reusable resolvers and tools instead of hundreds of application-specific scripts.
-
-Security First
-
-AI-generated actions must be validated before potentially dangerous operations are executed.
-
-Built to Scale
-
-The architecture should support the evolution from:
-```text
-Simple Voice Command
-        ↓
-Intent Recognition
-        ↓
-Tool Calling
-        ↓
-Multi-Step Tasks
-        ↓
-AI Planning
-        ↓
-Autonomous Workflows
+          Execute           Ask User
 ```
 
-# 📌 Current Status
+## 🗺️ Roadmap
 
-🚧 Vox OS is actively under development.
+- [x] Phase 1 — Foundation: Python backend, uv setup, threaded mic capture.
 
-Current development focus:
+- [x] Phase 2 — Voice Engine: Wake-word detection (openwakeword), VAD, Speech-to-Text.
 
-```text
-🎤 Microphone
-      ↓
-🎧 Audio Capture
-      ↓
-🗣️ Voice Detection
-      ↓
-📝 Speech-to-Text
-      ↓
-🧠 AI Intent
-      ↓
-⚙️ Command Execution
-```
+- [ ] Phase 3 — AI Brain: Intent recognition, tool routing, local memory.
 
-The project is currently focused on building a reliable voice and backend foundation before implementing advanced computer automation.
+- [ ] Phase 4 — Computer Control: Window management, browser Playwright automation.
 
-## 🤝 Contributing
+- [ ] Phase 5 — Advanced Agent: Multi-step reasoning, shopping agents, OTP handling.
 
-Contributions, suggestions, and ideas are welcome.
+# 🤝 Contributing
+Contributions, suggestions, and ideas are welcome!
 
 1. Fork the repository
-2. Create a feature branch
-git checkout -b feature/your-feature
-3. Make your changes
-4. Test your changes
-5. Commit
-git add .
-git commit -m "feat: add your feature"
-6. Push
-git push origin feature/your-feature
-7. Open a Pull Request 🚀
-```
-# 👨‍💻 Authors
 
-<div align="center">
+2. Create a feature branch: git checkout -b feature/your-feature
 
-## 🤖 Built by
+3. Commit your changes: git commit -m "feat: add your feature"
 
-### Sudhanshu Tiwari & Piyush Tiwari
+4. Push to the branch: git push origin feature/your-feature
 
-**AI • Automation • Software Engineering • Computer Systems**
+5. Open a Pull Request 🚀
 
-<br>
+## 👨‍💻 Authors
 
-[GitHub][(https://github.com/stiwari0223-ux)] •
-[GitHub][(https://github.com/Piyushtiwari919]
+### Built by **Sudhanshu Tiwari** & **Piyush Tiwari**
 
-**[Sudhanshu Tiwari][(https://www.linkedin.com/in/sudhanshu-tiwari-25337834b/)]**
+*AI · Automation · Software Engineering · Computer Systems*
 
-**[Piyush Tiwari][(https://www.linkedin.com/in/piyush-tiwari919/)]**
+**Piyush Tiwari**
+[GitHub](https://github.com/Piyushtiwari919) · [LinkedIn](https://www.linkedin.com/in/piyush-tiwari919/)
 
-</div>
-⭐ Support
-
-If you find Vox OS interesting, consider giving the repository a ⭐.
-
-Feedback, ideas, and contributions are always welcome.
-
-<div align="center">
-🤖 Vox OS
-Speak. Think. Execute.
-</div>
-```
-3. Preview it before committing
-
-On GitHub's README editor, click the Preview tab.
-
-You should see:
-
-        🤖 Vox OS
-   Your Computer. Your Voice. Your AI.
-
- [Python] [uv] [Windows] [Development]
-
-       What is Vox OS?
-               ↓
-          How It Works
-               ↓
-         Architecture
-               ↓
-          Tech Stack
-               ↓
-       Getting Started
-               ↓
-           Roadmap
-               ↓
-          Engineering
-               ↓
-            Author
+**Sudhanshu Tiwari**
+[GitHub](https://github.com/stiwari0223-ux) · [LinkedIn](https://www.linkedin.com/in/sudhanshu-tiwari-25337834b/)
