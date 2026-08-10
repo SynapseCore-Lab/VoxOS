@@ -1,5 +1,9 @@
 <div align="center">
 
+<img src="./assets/VoxOS%20logo.jpeg" alt="Vox OS Logo" width="600"/>
+
+<br><br>
+
 # 🤖 Vox OS
 
 ### Your Computer. Your Voice. Your AI.
