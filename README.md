@@ -428,18 +428,21 @@ Phase 1 — Foundation
  Microphone integration
  sounddevice
  Audio streaming
+
 Phase 2 — Voice Engine
  Voice Activity Detection
  Wake-word detection
  Speech-to-Text
  Text-to-Speech
- Continuous listening
+
+Continuous listening
 Phase 3 — AI Brain
  Intent recognition
  Context management
  Command planning
  Tool selection
  Conversation memory
+
 Phase 4 — Computer Control
  Application launcher
  Application discovery
@@ -448,6 +451,7 @@ Phase 4 — Computer Control
  Browser automation
  Screenshot functionality
  System information
+
 Phase 5 — Advanced Agent
  Tool registry
  Plugin architecture
@@ -455,6 +459,7 @@ Phase 5 — Advanced Agent
  Multi-step task execution
  Context-aware automation
  User-defined commands
+
 Phase 6 — Jarvis
  Persistent assistant
  Background operation
@@ -548,20 +553,23 @@ git commit -m "feat: add your feature"
 6. Push
 git push origin feature/your-feature
 7. Open a Pull Request 🚀
-👨‍💻 Author
+```
+# 👨‍💻 Authors
+
 <div align="center">
-Sudhanshu Tiwari
 
-B.Tech CSE | AI & Software Engineering
+## 🤖 Built by
 
-AI • Automation • Software Engineering • Computer Systems
+### Sudhanshu Tiwari & Piyush Tiwari
+
+**AI • Automation • Software Engineering • Computer Systems**
 
 <br>
 
-GitHub • LinkedIn
+[GitHub](https://github.com/YOUR_USERNAME) •
+[GitHub](https://github.com/CO_AUTHOR_USERNAME)
 
 </div>
-```
 ⭐ Support
 
 If you find Vox OS interesting, consider giving the repository a ⭐.
