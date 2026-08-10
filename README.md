@@ -317,8 +317,8 @@ Git
 PowerShell
 uv
 1. Clone the Repository
-git clone https://github.com/YOUR_USERNAME/Jarvis_OS.git
-cd Jarvis_OS
+git clone https://github.com/SynapseCore-Lab/VoxOS
+cd Vox_OS
 2. Open the Backend
 cd backend
 3. Install uv
