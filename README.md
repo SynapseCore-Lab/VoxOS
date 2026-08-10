@@ -567,7 +567,9 @@ git push origin feature/your-feature
 <br>
 
 [GitHub][(https://github.com/YOUR_USERNAME)](https://github.com/stiwari0223-ux) •
-[GitHub](https://github.com/CO_AUTHOR_USERNAME)
+[GitHub][(https://github.com/CO_AUTHOR_USERNAME)](https://github.com/Piyushtiwari919)
+**[Sudhanshu Tiwari][(https://www.linkedin.com/in/YOUR_LINKEDIN_USERNAME/)](https://www.linkedin.com/in/sudhanshu-tiwari-25337834b/)** 
+**[Piyush Tiwari][(https://www.linkedin.com/in/CO_AUTHOR_LINKEDIN_USERNAME/)](https://www.linkedin.com/in/piyush-tiwari919/)**
 
 </div>
 ⭐ Support
