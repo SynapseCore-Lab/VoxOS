@@ -1,5 +1,4 @@
 <div align="center">
-![Uploading Gemini_Generated_Image_wrsfj3wrsfj3wrsf.png…]()
 
 # 🤖 Vox OS
 
