@@ -266,8 +266,10 @@ Jarvis OS
     └── Browser Automation
 
 ```
-🛠️ Tech Stack
+#🛠️ Tech Stack
+
 Technology	Purpose
+```
 🐍 Python	Backend, AI integration & automation
 ⚡ uv	Python package & environment management
 🎤 sounddevice	Audio input/output
@@ -278,7 +280,7 @@ Technology	Purpose
 🪟 Windows APIs	System automation
 🔧 Git	Version control
 🌐 GitHub	Collaboration & source control
-```text
+
 📁 Project Structure
 Jarvis_OS/
 │
@@ -558,6 +560,7 @@ AI • Automation • Software Engineering • Computer Systems
 GitHub • LinkedIn
 
 </div>
+```
 ⭐ Support
 
 If you find Vox OS interesting, consider giving the repository a ⭐.
