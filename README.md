@@ -566,7 +566,7 @@ git push origin feature/your-feature
 
 <br>
 
-[GitHub](https://github.com/YOUR_USERNAME) •
+[GitHub][(https://github.com/YOUR_USERNAME)](https://github.com/stiwari0223-ux) •
 [GitHub](https://github.com/CO_AUTHOR_USERNAME)
 
 </div>
