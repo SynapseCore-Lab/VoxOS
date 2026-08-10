@@ -65,7 +65,8 @@ How It Works
                    ▼
              💻 WINDOWS
 
-Core Goals
+## Core Goals
+
 Vox OS is being built around these principles:
 
 - 🎙️ Natural voice interaction
