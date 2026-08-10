@@ -118,26 +118,29 @@ human speech into a command that can be understood and executed by the system.
 
 ```
 
- Why sounddevice?
+ ### Why sounddevice?
 
-sounddevice provides Python access to the computer's audio devices through PortAudio.
+###### sounddevice provides Python access to the computer's audio devices through PortAudio.
 
 It is responsible for:
 
-🎤 Microphone input
-🔊 Audio output
-🎧 Audio streams
-⚡ Real-time audio callbacks
+- 🎤 Microphone input
+- 🔊 Audio output
+- 🎧 Audio streams
+- ⚡ Real-time audio callbacks
 
-It is important to understand that sounddevice does not perform speech recognition.
+***It is important to understand that sounddevice does not perform speech recognition.***
 
 Its responsibility is the audio layer:
 
+```text
 Microphone
     ↓
 sounddevice
     ↓
 Audio Data
+
+```
 
 Speech recognition and AI processing happen in later layers.
 
@@ -217,11 +220,11 @@ A major architectural goal is to avoid creating a separate Python file for every
 ```
 Instead of:
 
-❌ chrome.py
-❌ spotify.py
-❌ discord.py
-❌ vscode.py
-❌ notepad.py
+- ❌ chrome.py
+- ❌ spotify.py
+- ❌ discord.py
+- ❌ vscode.py
+- ❌ notepad.py
 
 Jarvis is being designed around a generic application resolver:
 ```text
@@ -237,9 +240,10 @@ Windows Execution
 
 This makes the system easier to scale as more applications and capabilities are added.
 ```
-🏗️ Architecture
+# 🏗️ Architecture
 
 The backend is being designed using a modular architecture:
+
 ```text
 Jarvis OS
 │
@@ -307,85 +311,107 @@ Jarvis_OS/
 ```
 The project structure will evolve as new capabilities are implemented.
 
-🚀 Getting Started
+## 🚀 Getting Started
+
 Prerequisites
 
 Make sure you have:
 
-Windows 10 / 11
-Python 3.13
-Git
-PowerShell
-uv
+- Windows 10 / 11
+- Python 3.13
+- Git
+- PowerShell
+-  uv
 1. Clone the Repository
+```
 git clone [https://github.com/SynapseCore-Lab/VoxOS](https://github.com/SynapseCore-Lab/VoxOS)
+```
+```
 cd Vox_OS
+
+```
 2. Open the Backend
+```
 cd backend
+```
 3. Install uv
 
 On Windows PowerShell:
-
+```
 powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
 
+```
+
 Restart your terminal and verify:
-
+```
 uv --version
+```
 
-4. Install Python 3.13
-uv python install 3.13
+4. Install Python 3.14
+
+```
+uv python install 3.14
+
+```
 
 Pin the project:
-
-uv python pin 3.13
-
+```
+uv python pin 3.14
+```
 5. Create the Virtual Environment
-uv venv --python 3.13
+```
+uv venv
+```
 
-Activate it:
-
+6. Activate it:
+```
 .venv\Scripts\Activate.ps1
-
+```
 Verify:
-
+```
 python --version
-
+```
 Expected:
 
 Python 3.13.x
 
-6. Install Dependencies
+7. Install Dependencies
+```
 uv sync
-
+```
 To add a new dependency:
-
+```
 uv add <package-name>
-
+```
 For example:
-
+```
 uv add sounddevice
 uv add numpy
-🎧 Test Audio Devices
+```
+
+8. 🎧 Test Audio Devices
 
 After installing sounddevice, check the available microphone and speaker devices:
 
+```
 python -c "import sounddevice as sd; print(sd.query_devices())"
-
-Test the package:
-
+```
+9. Test the package:
+```
 python -c "import sounddevice; print(sounddevice.__version__)"
-
+```
 If your microphone appears in the device list, the Python audio layer is communicating with Windows successfully.
 
 ▶️ Run Jarvis
 
 From the backend directory:
-
+```
 uv run main.py
+```
 
 The application entry point may change as the architecture evolves.
 
-🔐 Security
+# 🔐 Security
 
 Jarvis is designed to interact directly with the user's computer.
 
@@ -467,7 +493,8 @@ Phase 6 — Jarvis
  Advanced task planning
  Local/offline capabilities
 🧪 Engineering Principles
-Separation of Concerns
+```
+## Separation of Concerns
 
 Each layer should have one clear responsibility:
 ```text
@@ -480,12 +507,13 @@ Intent
 Tool
   ↓
 Execution
-Modular Architecture
+```
+## Modular Architecture
 
 Individual components should be replaceable without rewriting the entire system.
 
 For example:
-
+```text
 Audio Layer
      ↓
 Speech Layer
@@ -495,7 +523,8 @@ AI Layer
 Command Layer
      ↓
 Automation Layer
-Dynamic Over Hard-Coded
+```
+## Dynamic Over Hard-Coded
 
 The system should prefer reusable resolvers and tools instead of hundreds of application-specific scripts.
 
@@ -506,7 +535,7 @@ AI-generated actions must be validated before potentially dangerous operations a
 Built to Scale
 
 The architecture should support the evolution from:
-
+```text
 Simple Voice Command
         ↓
 Intent Recognition
@@ -518,12 +547,15 @@ Multi-Step Tasks
 AI Planning
         ↓
 Autonomous Workflows
-📌 Current Status
+```
+
+# 📌 Current Status
 
 🚧 Vox OS is actively under development.
 
 Current development focus:
 
+```text
 🎤 Microphone
       ↓
 🎧 Audio Capture
@@ -535,10 +567,11 @@ Current development focus:
 🧠 AI Intent
       ↓
 ⚙️ Command Execution
+```
 
 The project is currently focused on building a reliable voice and backend foundation before implementing advanced computer automation.
 
-🤝 Contributing
+## 🤝 Contributing
 
 Contributions, suggestions, and ideas are welcome.
 
@@ -583,7 +616,8 @@ Feedback, ideas, and contributions are always welcome.
 <div align="center">
 🤖 Vox OS
 Speak. Think. Execute.
-</div> ```
+</div>
+```
 3. Preview it before committing
 
 On GitHub's README editor, click the Preview tab.
