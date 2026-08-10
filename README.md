@@ -317,7 +317,7 @@ Git
 PowerShell
 uv
 1. Clone the Repository
-git clone https://github.com/SynapseCore-Lab/VoxOS
+git clone [https://github.com/SynapseCore-Lab/VoxOS](https://github.com/SynapseCore-Lab/VoxOS)
 cd Vox_OS
 2. Open the Backend
 cd backend
