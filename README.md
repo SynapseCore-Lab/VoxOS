@@ -408,7 +408,7 @@ Potentially sensitive operations should go through validation and, when necessar
           Execute          Ask User
 
 Examples:
-```
+```text
 🗑️ Delete files
    → Confirmation
 
