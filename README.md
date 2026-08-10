@@ -81,7 +81,7 @@ Vox OS is being built around these principles:
 
 The Jarvis voice engine is designed as a modular pipeline that converts
 human speech into a command that can be understood and executed by the system.
-
+```text
 🎤 Microphone
       │
       ▼
@@ -114,6 +114,7 @@ human speech into a command that can be understood and executed by the system.
 │                 │
 │ "Open Chrome"   │
 └─────────────────┘
+
 
  Why sounddevice?
 
