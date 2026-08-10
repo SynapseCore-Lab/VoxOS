@@ -77,27 +77,43 @@ Vox OS is being built around these principles:
 🔐 Safe system-level execution
 🚀 Dynamic application control
 
-Voice Engine
+## 🎙️ Voice Processing Pipeline
 
-The voice layer is responsible for communicating with the computer's microphone.
+The Jarvis voice engine is designed as a modular pipeline that converts
+human speech into a command that can be understood and executed by the system.
 
-The current audio pipeline is designed around:
 🎤 Microphone
       │
       ▼
- sounddevice
-      │
-      ▼
- Audio Stream
-      │
-      ▼
- Voice Activity Detection
-      │
-      ▼
- Speech-to-Text
-      │
-      ▼
- Text Command
+┌─────────────────┐
+│   sounddevice   │
+│  Audio Capture  │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│  Audio Stream   │
+│  Real-time Data │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│ Voice Activity  │
+│    Detection    │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│ Speech-to-Text  │
+│      (STT)      │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│  Text Command   │
+│                 │
+│ "Open Chrome"   │
+└─────────────────┘
 
  Why sounddevice?
 
@@ -122,62 +138,76 @@ Audio Data
 
 Speech recognition and AI processing happen in later layers.
 
-🧠 AI Intent Engine
+# 🧠 AI Intent Engine
 
-The AI layer converts natural language into structured intent.
+The **AI Intent Engine** is the reasoning layer of Jarvis OS.
 
-For example:
+Its primary responsibility is to transform natural-language input into a **structured, machine-readable intent** that the Command Layer can safely process.
 
-"Can you open Google Chrome for me?"
+The AI decides **what the user wants**, while the execution layer decides **how to perform it**.
 
-can eventually become:
+---
 
-{
-  "intent": "open_application",
-  "target": "Google Chrome"
-}
-
-Different ways of expressing the same request should resolve to the same intent:
-
-"Open Chrome"
-
-"Launch Chrome"
-
-"Start Google Chrome"
-
-"Can you open Chrome for me?"
-
-This keeps the AI layer independent from the actual execution logic.
-
-⚙️ Command Execution
-
-Once an intent is identified:
+## 🔄 Intent Processing
 
 Natural Language
-       ↓
-     Intent
-       ↓
-Command Router
-       ↓
-Tool / Capability
-       ↓
-Validation
-       ↓
-Execution
+       │
+       ▼
+┌────────────────────┐
+│   AI Intent Engine │
+│                    │
+│ Understand request │
+│ + identify target  │
+└─────────┬──────────┘
+          │
+          ▼
+   Structured Intent
+# 🧩 Dynamic Application Control
 
-For example:
+Jarvis is designed to understand **what the user wants to do** separately from **how the action is executed**.
 
-"Open Chrome"
-       ↓
-open_application
-       ↓
-Application Resolver
-       ↓
-Chrome
-       ↓
-🚀 Launch
-🧩 Dynamic Application Control
+This allows the system to support applications dynamically instead of requiring a separate Python script for every application.
 
+## 🔄 Command Execution Pipeline
+
+Natural Language
+       │
+       ▼
+┌──────────────────┐
+│  Intent Engine   │
+│                  │
+│ Understand what  │
+│ the user wants   │
+└────────┬─────────┘
+         │
+         ▼
+┌──────────────────┐
+│ Command Router   │
+│                  │
+│ Select required  │
+│ capability       │
+└────────┬─────────┘
+         │
+         ▼
+┌──────────────────┐
+│ Tool / Capability│
+│                  │
+│ Perform the      │
+│ required action  │
+└────────┬─────────┘
+         │
+         ▼
+┌──────────────────┐
+│    Validation    │
+│                  │
+│ Check whether    │
+│ action is safe   │
+└────────┬─────────┘
+         │
+         ▼
+┌──────────────────┐
+│    Execution     │
+└──────────────────┘
 A major architectural goal is to avoid creating a separate Python file for every application.
 
 Instead of:
@@ -230,6 +260,7 @@ Jarvis OS
     ├── Application Control
     ├── File Operations
     └── Browser Automation
+    
 🛠️ Tech Stack
 Technology	Purpose
 🐍 Python	Backend, AI integration & automation
