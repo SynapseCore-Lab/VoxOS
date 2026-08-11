@@ -154,7 +154,7 @@ Natural Language
 
 Vox OS is designed to understand what the user wants to do separately from how the action is executed. This allows the system to support applications dynamically instead of requiring a hardcoded Python script for every application.
 
-Instead of writing chrome.py, spotify.py, or vscode.py, Vox OS is designed around a generic application resolver:
+Instead of writing chrome.py, spotify.py, or applemusic.py, Vox OS is designed around a generic application resolver:
 
 ```text
 User Command ➔ Intent Detection ➔ Application Resolver ➔ Windows Execution
