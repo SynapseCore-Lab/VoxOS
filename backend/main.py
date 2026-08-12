@@ -13,6 +13,11 @@ from speech.wake_word import WakeWordDetector
 from speech.voice import VoiceEngine
 from speech.stt import FasterWhisperEngine
 
+import os
+
+# Suppress the Hugging Face Windows symlink warning
+os.environ["HF_HUB_DISABLE_SYMLINKS_WARNING"] = "1"
+
 
 def setup_global_hotkey(event_bus, loop):
     """Listens for the F9 key to bypass the wake word."""

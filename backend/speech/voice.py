@@ -23,7 +23,7 @@ BLOCK_SIZE = 512
 # RMS threshold for the basic VAD.
 # This is intentionally configurable because microphones
 # have different noise levels.
-VAD_THRESHOLD = 0.015
+VAD_THRESHOLD = 0.010
 
 # How long silence must continue before we consider the
 # utterance finished.
@@ -36,6 +36,7 @@ MAX_UTTERANCE_DURATION = 15.0
 # ============================================================
 # Data Models
 # ============================================================
+
 
 @dataclass
 class AudioChunk:
@@ -70,6 +71,7 @@ class VoiceState(Enum):
 # ============================================================
 # Voice Engine
 # ============================================================
+
 
 class VoiceEngine:
     """
@@ -158,17 +160,31 @@ class VoiceEngine:
         return float(np.sqrt(np.mean(np.square(audio))))
 
     def _is_speech(self, audio: np.ndarray) -> bool:
-        """
-        Very simple energy-based Voice Activity Detection.
+        # """
+        # Very simple energy-based Voice Activity Detection.
 
-        This is intentionally a basic implementation for
-        Phase 2. It can later be replaced with WebRTC VAD,
-        Silero VAD, or another dedicated VAD engine.
-        """
+        # This is intentionally a basic implementation for
+        # Phase 2. It can later be replaced with WebRTC VAD,
+        # Silero VAD, or another dedicated VAD engine.
+        # """
 
         rms = self._calculate_rms(audio)
 
         return rms >= self.vad_threshold
+
+        """
+        Energy-based Voice Activity Detection with live debug logging.
+        """
+        # rms = self._calculate_rms(audio)
+
+        # DEBUG PRINT: Shows real-time audio volume in the console
+        # comment this out once calibrated!
+        # if rms > 0.001:  # Filter out complete zero buffers
+        #     print(
+        #         f"[Mic Debug] Live RMS: {rms:.5f} | Threshold: {self.vad_threshold:.5f}"
+        #     )
+
+        # return rms >= self.vad_threshold
 
     # --------------------------------------------------------
     # Stream Management
@@ -252,9 +268,7 @@ class VoiceEngine:
         """
 
         if not self._running:
-            raise RuntimeError(
-                "VoiceEngine is not running. Call start() first."
-            )
+            raise RuntimeError("VoiceEngine is not running. Call start() first.")
 
         print("[Voice] Listening...")
 
@@ -267,7 +281,6 @@ class VoiceEngine:
         last_speech_time: Optional[float] = None
 
         while self._running:
-
             chunk = self._get_audio_chunk()
 
             if chunk is None:
@@ -282,7 +295,6 @@ class VoiceEngine:
             # ------------------------------------------------
 
             if speaking and not speech_started:
-
                 speech_started = True
                 speech_start_time = chunk.timestamp
                 last_speech_time = chunk.timestamp
@@ -298,7 +310,6 @@ class VoiceEngine:
             # ------------------------------------------------
 
             if speech_started:
-
                 audio_chunks.append(audio)
 
                 if speaking:
@@ -309,14 +320,10 @@ class VoiceEngine:
                 # --------------------------------------------
 
                 if speech_start_time is not None:
-
                     duration = chunk.timestamp - speech_start_time
 
                     if duration >= self.max_utterance_duration:
-
-                        print(
-                            "[Voice] Maximum utterance duration reached."
-                        )
+                        print("[Voice] Maximum utterance duration reached.")
 
                         break
 
@@ -325,11 +332,9 @@ class VoiceEngine:
                 # --------------------------------------------
 
                 if last_speech_time is not None:
-
                     silence_time = chunk.timestamp - last_speech_time
 
                     if silence_time >= self.silence_duration:
-
                         print("[Voice] Speech ended.")
 
                         break
@@ -339,7 +344,6 @@ class VoiceEngine:
         # ----------------------------------------------------
 
         if not audio_chunks:
-
             self.state = VoiceState.IDLE
 
             return None
@@ -347,14 +351,11 @@ class VoiceEngine:
         # ----------------------------------------------------
         # Combine chunks
         # ----------------------------------------------------
-        
+
         utterance = np.concatenate(audio_chunks, axis=0).flatten()
         self.state = VoiceState.PROCESSING
 
-        print(
-            f"[Voice] Captured "
-            f"{len(utterance) / self.sample_rate:.2f}s of audio."
-        )
+        print(f"[Voice] Captured {len(utterance) / self.sample_rate:.2f}s of audio.")
 
         command = VoiceCommand(
             audio=utterance,
@@ -381,9 +382,7 @@ class VoiceEngine:
         self.start()
 
         try:
-
             while self._running:
-
                 command = self.listen()
 
                 if command is None:
@@ -391,31 +390,25 @@ class VoiceEngine:
 
                 duration = len(command.audio) / self.sample_rate
 
-                print(
-                    f"[Voice] Command captured "
-                    f"({duration:.2f}s)"
-                )
+                print(f"[Voice] Command captured ({duration:.2f}s)")
 
                 # --------------------------------------------
                 # STT will be connected here later.
                 # --------------------------------------------
 
-                print(
-                    "[Voice] Ready for Speech-to-Text."
-                )
+                print("[Voice] Ready for Speech-to-Text.")
 
         except KeyboardInterrupt:
-
             print("\n[Voice] Interrupted by user.")
 
         finally:
-
             self.stop()
 
 
 # ============================================================
 # Development Entry Point
 # ============================================================
+
 
 def main() -> None:
     """Development entry point."""

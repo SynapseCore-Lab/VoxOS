@@ -8,3 +8,6 @@ wheels/
 
 # Virtual environments
 .venv
+
+# files
+./backend/test_module2.py
