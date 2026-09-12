@@ -18,6 +18,11 @@ from speech.stt import FasterWhisperEngine
 # Module 3: TTS
 from speech.tts import WindowsTTSEngine
 
+# Execution
+from execution.router import CommandRouter
+from tools.registry import ToolRegistry
+from tools.system.applications import OpenApplicationTool
+
 
 # Suppress the Hugging Face Windows symlink warning
 os.environ["HF_HUB_DISABLE_SYMLINKS_WARNING"] = "1"
@@ -28,7 +33,10 @@ def setup_global_hotkey(event_bus, loop):
 
     def on_press(key):
         if key == keyboard.Key.f9:
-            print("\n[Hotkey] F9 Pressed! Waking Vox OS manually...")
+            print(
+                "\n[Hotkey] F9 Pressed! "
+                "Waking Vox OS manually..."
+            )
 
             asyncio.run_coroutine_threadsafe(
                 event_bus.publish(
@@ -65,8 +73,28 @@ async def main():
 
     print("[TTS] Windows TTS engine initialized.")
 
-    # Global F9 hotkey
-    hotkey_listener = setup_global_hotkey(bus, loop)
+    # ---------------------------------------------------------
+    # Tool System
+    # ---------------------------------------------------------
+
+    tool_registry = ToolRegistry()
+
+    tool_registry.register(
+        OpenApplicationTool()
+    )
+
+    command_router = CommandRouter(
+        tool_registry
+    )
+
+    # ---------------------------------------------------------
+    # Global F9 Hotkey
+    # ---------------------------------------------------------
+
+    hotkey_listener = setup_global_hotkey(
+        bus,
+        loop,
+    )
 
     # ---------------------------------------------------------
     # Wake Word -> Voice Capture -> STT
@@ -94,7 +122,9 @@ async def main():
                 # Start STT microphone
                 voice_engine.start()
 
-                print("[Voice] Listening for command...")
+                print(
+                    "[Voice] Listening for command..."
+                )
 
                 # Blocks until VAD detects the end of speech
                 command = voice_engine.listen()
@@ -106,7 +136,9 @@ async def main():
                     text = stt_engine.transcribe(command)
 
                     if text:
-                        print(f"[STT] Recognized: {text}")
+                        print(
+                            f"[STT] Recognized: {text}"
+                        )
 
                         # Send recognized text to EventBus
                         asyncio.run_coroutine_threadsafe(
@@ -119,8 +151,9 @@ async def main():
 
             except Exception as e:
                 print(
-                    f"[System Error] "
-                    f"Audio capture/transcription failed: {e}"
+                    "[System Error] "
+                    "Audio capture/transcription "
+                    f"failed: {e}"
                 )
 
             finally:
@@ -148,28 +181,13 @@ async def main():
     )
 
     # ---------------------------------------------------------
-    # TTS Handler
+    # Command Handler
     # ---------------------------------------------------------
 
     async def handle_command_recognized(payload):
         """
-        Handle text produced by the STT engine.
-
-        Currently this only confirms the recognized command
-        through TTS.
-
-        Later:
-            STT
-             ↓
-            Intent Engine
-             ↓
-            Command Router
-             ↓
-            Action
-             ↓
-            Response
-             ↓
-            TTS
+        Handle text produced by STT and route it
+        to the appropriate Jarvis tool.
         """
 
         text = payload.get("text", "").strip()
@@ -179,20 +197,60 @@ async def main():
 
         print(f"[Command] {text}")
 
-        # Temporary response while Intent Engine is not implemented
-        response = f"You said: {text}"
-
-        print(f"[TTS] Speaking: {response}")
+        # -----------------------------------------------------
+        # Route command to execution layer
+        # -----------------------------------------------------
 
         try:
-            # pyttsx3 is blocking, so don't block asyncio.
+            result = await asyncio.to_thread(
+                command_router.route,
+                text,
+            )
+
+        except Exception as e:
+            print(
+                "[Execution Error] "
+                f"Command execution failed: {e}"
+            )
+
+            response = (
+                "Something went wrong while "
+                "executing that command."
+            )
+
+        else:
+            if result.success:
+                print(
+                    "[Execution] Success: "
+                    f"{result.message}"
+                )
+            else:
+                print(
+                    "[Execution] Failed: "
+                    f"{result.message}"
+                )
+
+            response = result.message
+
+        # -----------------------------------------------------
+        # Speak execution result
+        # -----------------------------------------------------
+
+        print(
+            f"[TTS] Speaking: {response}"
+        )
+
+        try:
             await asyncio.to_thread(
                 tts_engine.speak,
                 response,
             )
 
         except Exception as e:
-            print(f"[TTS Error] Failed to speak response: {e}")
+            print(
+                "[TTS Error] "
+                f"Failed to speak response: {e}"
+            )
 
     bus.subscribe(
         "command_recognized",
@@ -209,7 +267,9 @@ async def main():
         processing has finished.
         """
 
-        print("[System] Returning to wake-word mode...")
+        print(
+            "[System] Returning to wake-word mode..."
+        )
 
         wake_word_engine.resume_listening()
 
@@ -226,7 +286,9 @@ async def main():
     # System Boot
     # ---------------------------------------------------------
 
-    print("[System] Starting wake-word listener...")
+    print(
+        "[System] Starting wake-word listener..."
+    )
 
     mic.start(
         callback=wake_word_engine.process_audio_chunk
@@ -241,7 +303,9 @@ async def main():
         pass
 
     except KeyboardInterrupt:
-        print("\nShutting down Vox OS safely...")
+        print(
+            "\nShutting down Vox OS safely..."
+        )
 
     finally:
         print("[System] Cleaning up...")
