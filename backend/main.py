@@ -1,38 +1,205 @@
+from __future__ import annotations
+
 import asyncio
 import os
 import threading
+from enum import Enum
 
 from pynput import keyboard
 
-# Core
 from core.event_bus import EventBus
 
-# Module 1: Wake Word
+# Speech
 from speech.mic_stream import MicrophoneStream
 from speech.wake_word import WakeWordDetector
-
-# Module 2: STT
 from speech.voice import VoiceEngine
 from speech.stt import FasterWhisperEngine
-
-# Module 3: TTS
 from speech.tts import WindowsTTSEngine
 
 # Execution
 from execution.router import CommandRouter
+from execution.confirmation import ConfirmationManager
+from execution.application_intent import ApplicationIntentResolver
 from tools.registry import ToolRegistry
+
+# Application System
+from tools.system.application_registry import ApplicationRegistry
 from tools.system.applications import OpenApplicationTool
 
 
-# Suppress the Hugging Face Windows symlink warning
 os.environ["HF_HUB_DISABLE_SYMLINKS_WARNING"] = "1"
 
 
-def setup_global_hotkey(event_bus, loop):
-    """Listen for F9 to bypass the wake word."""
+# =============================================================
+# ASSISTANT STATE
+# =============================================================
+
+
+class AssistantState(str, Enum):
+    IDLE = "idle"
+    LISTENING = "listening"
+    PROCESSING = "processing"
+    EXECUTING = "executing"
+    WAITING_FOR_CONFIRMATION = "waiting_for_confirmation"
+    SPEAKING = "speaking"
+    SHUTTING_DOWN = "shutting_down"
+
+
+# =============================================================
+# ASSISTANT CONTROLLER
+# =============================================================
+
+
+class AssistantController:
+    """
+    Controls the lifecycle of Vox OS.
+
+    State rules:
+
+        IDLE
+            ↓
+        LISTENING
+            ↓
+        PROCESSING
+            ↓
+        EXECUTING
+            ↓
+        SPEAKING
+            ↓
+        IDLE
+
+    For actions requiring confirmation:
+
+        EXECUTING
+            ↓
+        SPEAKING
+            ↓
+        WAITING_FOR_CONFIRMATION
+            ↓
+        LISTENING
+            ↓
+        PROCESSING
+            ↓
+        EXECUTING
+            ↓
+        SPEAKING
+            ↓
+        IDLE
+    """
+
+    def __init__(self) -> None:
+        self.state = AssistantState.IDLE
+        self._lock = threading.Lock()
+
+    def get_state(self) -> AssistantState:
+        with self._lock:
+            return self.state
+
+    def set_state(self, state: AssistantState) -> None:
+        with self._lock:
+            previous = self.state
+            self.state = state
+
+        print(
+            f"[State] {previous.value.upper()} "
+            f"-> {state.value.upper()}"
+        )
+
+    def can_wake(self) -> bool:
+        """
+        Normal wake is allowed only while IDLE.
+
+        Confirmation responses are handled separately.
+        """
+
+        with self._lock:
+            return self.state == AssistantState.IDLE
+
+    def can_accept_confirmation(self) -> bool:
+        """
+        Return True when the assistant is waiting for a
+        confirmation response.
+        """
+
+        with self._lock:
+            return (
+                self.state
+                == AssistantState.WAITING_FOR_CONFIRMATION
+            )
+
+    def begin_interaction(self) -> bool:
+        """
+        Begin a normal assistant interaction.
+        """
+
+        with self._lock:
+            if self.state != AssistantState.IDLE:
+                return False
+
+            self.state = AssistantState.LISTENING
+
+        print("[State] IDLE -> LISTENING")
+
+        return True
+
+    def begin_confirmation_interaction(self) -> bool:
+        """
+        Begin capturing a confirmation response.
+        """
+
+        with self._lock:
+            if (
+                self.state
+                != AssistantState.WAITING_FOR_CONFIRMATION
+            ):
+                return False
+
+            self.state = AssistantState.LISTENING
+
+        print(
+            "[State] WAITING_FOR_CONFIRMATION "
+            "-> LISTENING"
+        )
+
+        return True
+
+    def shutdown(self) -> None:
+        self.set_state(
+            AssistantState.SHUTTING_DOWN
+        )
+
+
+# =============================================================
+# GLOBAL HOTKEY
+# =============================================================
+
+
+def setup_global_hotkey(
+    event_bus: EventBus,
+    loop: asyncio.AbstractEventLoop,
+    controller: AssistantController,
+):
+    """
+    Register F9 as a manual wake trigger.
+
+    F9 can start:
+
+    1. A normal interaction while IDLE.
+    2. A confirmation response while
+       WAITING_FOR_CONFIRMATION.
+    """
 
     def on_press(key):
-        if key == keyboard.Key.f9:
+        if key != keyboard.Key.f9:
+            return
+
+        state = controller.get_state()
+
+        # -----------------------------------------------------
+        # Normal interaction
+        # -----------------------------------------------------
+
+        if state == AssistantState.IDLE:
             print(
                 "\n[Hotkey] F9 Pressed! "
                 "Waking Vox OS manually..."
@@ -41,138 +208,317 @@ def setup_global_hotkey(event_bus, loop):
             asyncio.run_coroutine_threadsafe(
                 event_bus.publish(
                     "wake_word_detected",
-                    {"wakeword": "keyboard_trigger"},
+                    {
+                        "wakeword": "keyboard_trigger",
+                    },
                 ),
                 loop,
             )
 
-    listener = keyboard.Listener(on_press=on_press)
+            return
+
+        # -----------------------------------------------------
+        # Confirmation response
+        # -----------------------------------------------------
+
+        if state == AssistantState.WAITING_FOR_CONFIRMATION:
+            print(
+                "\n[Hotkey] F9 Pressed! "
+                "Listening for confirmation..."
+            )
+
+            asyncio.run_coroutine_threadsafe(
+                event_bus.publish(
+                    "confirmation_wake",
+                    {
+                        "wakeword": "keyboard_trigger",
+                    },
+                ),
+                loop,
+            )
+
+            return
+
+        # -----------------------------------------------------
+        # Busy
+        # -----------------------------------------------------
+
+        print(
+            "[Hotkey] Ignored because assistant is "
+            f"{state.value}."
+        )
+
+    listener = keyboard.Listener(
+        on_press=on_press
+    )
+
     listener.start()
 
     return listener
+
+
+# =============================================================
+# MAIN
+# =============================================================
 
 
 async def main():
     print("Initializing Vox OS...")
 
     bus = EventBus()
+
+    controller = AssistantController()
+
     loop = asyncio.get_running_loop()
 
-    # ---------------------------------------------------------
-    # Initialize Core Engines
-    # ---------------------------------------------------------
+    # =========================================================
+    # SPEECH SYSTEM
+    # =========================================================
 
     mic = MicrophoneStream()
-    wake_word_engine = WakeWordDetector(bus, loop)
 
-    voice_engine = VoiceEngine()
-    stt_engine = FasterWhisperEngine()
-
-    # TTS Engine
-    tts_engine = WindowsTTSEngine()
-
-    print("[TTS] Windows TTS engine initialized.")
-
-    # ---------------------------------------------------------
-    # Tool System
-    # ---------------------------------------------------------
-
-    tool_registry = ToolRegistry()
-
-    tool_registry.register(
-        OpenApplicationTool()
-    )
-
-    command_router = CommandRouter(
-        tool_registry
-    )
-
-    # ---------------------------------------------------------
-    # Global F9 Hotkey
-    # ---------------------------------------------------------
-
-    hotkey_listener = setup_global_hotkey(
+    wake_word_engine = WakeWordDetector(
         bus,
         loop,
     )
 
-    # ---------------------------------------------------------
-    # Wake Word -> Voice Capture -> STT
-    # ---------------------------------------------------------
+    voice_engine = VoiceEngine()
+
+    stt_engine = FasterWhisperEngine()
+
+    tts_engine = WindowsTTSEngine()
+
+    print(
+        "[TTS] Windows TTS engine initialized."
+    )
+
+    # =========================================================
+    # APPLICATION DISCOVERY
+    # =========================================================
+
+    print(
+        "[Applications] "
+        "Discovering installed applications..."
+    )
+
+    application_registry = ApplicationRegistry()
+
+    application_count = (
+        application_registry.discover()
+    )
+
+    print(
+        "[Applications] Discovered: "
+        f"{application_count} applications."
+    )
+
+    # =========================================================
+    # TOOL REGISTRY
+    # =========================================================
+
+    tool_registry = ToolRegistry()
+
+    open_application_tool = OpenApplicationTool(
+        application_registry
+    )
+
+    tool_registry.register(
+        open_application_tool
+    )
+
+    # =========================================================
+    # COMMAND ROUTER
+    # =========================================================
+
+    command_router = CommandRouter(
+    registry=tool_registry,
+    application_resolver=command_router_resolver,
+)
+
+    # =========================================================
+    # CONFIRMATION MANAGER
+    # =========================================================
+
+    confirmation_manager = ConfirmationManager(
+        tool_registry
+    )
+
+    print(
+        "[Confirmation] Confirmation manager initialized."
+    )
+
+    # =========================================================
+    # GLOBAL HOTKEY
+    # =========================================================
+
+    hotkey_listener = setup_global_hotkey(
+        bus,
+        loop,
+        controller,
+    )
+
+    # =========================================================
+    # HELPER: RESUME WAKE WORD MODE
+    # =========================================================
+
+    def resume_wake_mode() -> None:
+        """
+        Resume the always-on wake-word microphone.
+
+        This function is intentionally synchronous because
+        it is called from the asyncio event loop after the
+        voice/TTS operations have completed.
+        """
+
+        if (
+            controller.get_state()
+            == AssistantState.SHUTTING_DOWN
+        ):
+            return
+
+        wake_word_engine.resume_listening()
+
+        mic.start(
+            callback=(
+                wake_word_engine.process_audio_chunk
+            )
+        )
+
+        print(
+            "[System] Wake-word mode resumed."
+        )
+
+    # =========================================================
+    # WAKE WORD
+    # =========================================================
 
     async def handle_wake_word(payload):
         """
-        Called when the wake word or F9 hotkey is detected.
+        Start a normal voice interaction.
         """
 
+        if not controller.begin_interaction():
+            print(
+                "[Wake] Ignored because assistant is "
+                f"{controller.get_state().value}."
+            )
+            return
+
         print(
-            f"[Wake] Triggered by: "
+            "[Wake] Triggered by: "
             f"{payload.get('wakeword', 'unknown')}"
         )
 
-        # Stop the continuous wake-word microphone
+        # -----------------------------------------------------
+        # Stop always-on wake-word microphone.
+        # -----------------------------------------------------
+
         mic.stop()
 
         # -----------------------------------------------------
-        # Blocking audio/STT work runs in a background thread
+        # Capture + STT in background thread.
         # -----------------------------------------------------
 
         def capture_and_transcribe():
             try:
-                # Start STT microphone
+                # -------------------------------------------------
+                # Capture
+                # -------------------------------------------------
+
                 voice_engine.start()
 
                 print(
                     "[Voice] Listening for command..."
                 )
 
-                # Blocks until VAD detects the end of speech
                 command = voice_engine.listen()
 
-                if command:
-                    print("[STT] Transcribing...")
+                if not command:
+                    print(
+                        "[Voice] No command captured."
+                    )
 
-                    # Faster-Whisper transcription
-                    text = stt_engine.transcribe(command)
+                    asyncio.run_coroutine_threadsafe(
+                        bus.publish(
+                            "interaction_failed",
+                            {},
+                        ),
+                        loop,
+                    )
 
-                    if text:
-                        print(
-                            f"[STT] Recognized: {text}"
-                        )
+                    return
 
-                        # Send recognized text to EventBus
-                        asyncio.run_coroutine_threadsafe(
-                            bus.publish(
-                                "command_recognized",
-                                {"text": text},
-                            ),
-                            loop,
-                        )
+                # -------------------------------------------------
+                # Processing
+                # -------------------------------------------------
 
-            except Exception as e:
+                controller.set_state(
+                    AssistantState.PROCESSING
+                )
+
+                print(
+                    "[STT] Transcribing..."
+                )
+
+                text = stt_engine.transcribe(
+                    command
+                )
+
+                if not text:
+                    print(
+                        "[STT] No speech recognized."
+                    )
+
+                    asyncio.run_coroutine_threadsafe(
+                        bus.publish(
+                            "interaction_failed",
+                            {},
+                        ),
+                        loop,
+                    )
+
+                    return
+
+                print(
+                    f"[STT] Recognized: {text}"
+                )
+
+                # -------------------------------------------------
+                # Send command to execution pipeline.
+                # -------------------------------------------------
+
+                asyncio.run_coroutine_threadsafe(
+                    bus.publish(
+                        "command_recognized",
+                        {
+                            "text": text,
+                        },
+                    ),
+                    loop,
+                )
+
+            except Exception as exc:
                 print(
                     "[System Error] "
                     "Audio capture/transcription "
-                    f"failed: {e}"
+                    f"failed: {exc}"
                 )
 
-            finally:
-                # Cleanup STT microphone
-                voice_engine.stop()
-
-                # Signal that STT has finished
                 asyncio.run_coroutine_threadsafe(
                     bus.publish(
-                        "stt_finished",
+                        "interaction_failed",
                         {},
                     ),
                     loop,
                 )
 
-        # Run blocking operation outside asyncio event loop
+            finally:
+                voice_engine.stop()
+
         threading.Thread(
             target=capture_and_transcribe,
             daemon=True,
+            name="voice-capture",
         ).start()
 
     bus.subscribe(
@@ -180,61 +526,161 @@ async def main():
         handle_wake_word,
     )
 
-    # ---------------------------------------------------------
-    # Command Handler
-    # ---------------------------------------------------------
+    # =============================================================
+    # CONFIRMATION WAKE
+    # =============================================================
 
-    async def handle_command_recognized(payload):
+    async def handle_confirmation_wake(payload):
         """
-        Handle text produced by STT and route it
-        to the appropriate Jarvis tool.
+        Start recording a response to a pending confirmation.
         """
 
-        text = payload.get("text", "").strip()
+        if not controller.begin_confirmation_interaction():
+            print(
+                "[Confirmation Wake] Ignored because assistant "
+                "is not waiting for confirmation."
+            )
 
-        if not text:
             return
 
-        print(f"[Command] {text}")
+        print(
+            "[Confirmation Wake] Triggered by: "
+            f"{payload.get('wakeword', 'unknown')}"
+        )
 
-        # -----------------------------------------------------
-        # Route command to execution layer
-        # -----------------------------------------------------
+        # ---------------------------------------------------------
+        # Stop any wake-word microphone.
+        # ---------------------------------------------------------
 
-        try:
-            result = await asyncio.to_thread(
-                command_router.route,
-                text,
-            )
+        mic.stop()
 
-        except Exception as e:
-            print(
-                "[Execution Error] "
-                f"Command execution failed: {e}"
-            )
+        # ---------------------------------------------------------
+        # Capture confirmation response.
+        # ---------------------------------------------------------
 
-            response = (
-                "Something went wrong while "
-                "executing that command."
-            )
+        def capture_confirmation():
+            try:
+                voice_engine.start()
 
-        else:
-            if result.success:
                 print(
-                    "[Execution] Success: "
-                    f"{result.message}"
-                )
-            else:
-                print(
-                    "[Execution] Failed: "
-                    f"{result.message}"
+                    "[Voice] Listening for confirmation..."
                 )
 
-            response = result.message
+                command = voice_engine.listen()
 
-        # -----------------------------------------------------
-        # Speak execution result
-        # -----------------------------------------------------
+                if not command:
+                    print(
+                        "[Confirmation] "
+                        "No response captured."
+                    )
+
+                    asyncio.run_coroutine_threadsafe(
+                        bus.publish(
+                            "interaction_failed",
+                            {},
+                        ),
+                        loop,
+                    )
+
+                    return
+
+                # -------------------------------------------------
+                # Processing
+                # -------------------------------------------------
+
+                controller.set_state(
+                    AssistantState.PROCESSING
+                )
+
+                print(
+                    "[STT] Transcribing confirmation..."
+                )
+
+                text = stt_engine.transcribe(
+                    command
+                )
+
+                if not text:
+                    print(
+                        "[STT] "
+                        "No confirmation recognized."
+                    )
+
+                    asyncio.run_coroutine_threadsafe(
+                        bus.publish(
+                            "interaction_failed",
+                            {},
+                        ),
+                        loop,
+                    )
+
+                    return
+
+                print(
+                    "[STT] Confirmation recognized: "
+                    f"{text}"
+                )
+
+                asyncio.run_coroutine_threadsafe(
+                    bus.publish(
+                        "confirmation_response",
+                        {
+                            "text": text,
+                        },
+                    ),
+                    loop,
+                )
+
+            except Exception as exc:
+                print(
+                    "[System Error] "
+                    "Confirmation capture/transcription "
+                    f"failed: {exc}"
+                )
+
+                asyncio.run_coroutine_threadsafe(
+                    bus.publish(
+                        "interaction_failed",
+                        {},
+                    ),
+                    loop,
+                )
+
+            finally:
+                voice_engine.stop()
+
+        threading.Thread(
+            target=capture_confirmation,
+            daemon=True,
+            name="confirmation-capture",
+        ).start()
+
+    bus.subscribe(
+        "confirmation_wake",
+        handle_confirmation_wake,
+    )
+
+    # =========================================================
+    # SPEAK RESPONSE
+    # =========================================================
+
+    async def speak_response(
+        response: str,
+        return_to_idle: bool = True,
+    ) -> None:
+        """
+        Speak a response using TTS.
+
+        When return_to_idle=True:
+            SPEAKING → IDLE → wake-word mode
+
+        When False:
+            SPEAKING → WAITING_FOR_CONFIRMATION
+        """
+
+        controller.set_state(
+            AssistantState.SPEAKING
+        )
 
         print(
             f"[TTS] Speaking: {response}"
@@ -246,56 +692,390 @@ async def main():
                 response,
             )
 
-        except Exception as e:
+        except Exception as exc:
             print(
                 "[TTS Error] "
-                f"Failed to speak response: {e}"
+                f"Failed to speak response: {exc}"
             )
+
+        # -----------------------------------------------------
+        # Confirmation is waiting.
+        # -----------------------------------------------------
+
+        if not return_to_idle:
+            if (
+                controller.get_state()
+                != AssistantState.SHUTTING_DOWN
+            ):
+                controller.set_state(
+                    AssistantState.WAITING_FOR_CONFIRMATION
+                )
+
+                print(
+                    "[Confirmation] "
+                    "Waiting for user confirmation..."
+                )
+
+            return
+
+        # -----------------------------------------------------
+        # Normal completion.
+        # -----------------------------------------------------
+
+        if (
+            controller.get_state()
+            != AssistantState.SHUTTING_DOWN
+        ):
+            controller.set_state(
+                AssistantState.IDLE
+            )
+
+            print(
+                "[System] Returning to "
+                "wake-word mode..."
+            )
+
+            resume_wake_mode()
+
+    # =========================================================
+    # COMMAND EXECUTION
+    # =========================================================
+
+    async def handle_command_recognized(payload):
+        """
+        Handle normal commands.
+
+        If a confirmation is pending, this event is treated
+        as the confirmation response instead.
+        """
+
+        text = payload.get(
+            "text",
+            "",
+        ).strip()
+
+        if not text:
+            return
+
+        print(
+            f"[Command] {text}"
+        )
+
+        # -----------------------------------------------------
+        # SECURITY BOUNDARY
+        #
+        # If a confirmation is pending, NEVER send the text
+        # back through the normal command router.
+        #
+        # It must go exclusively through ConfirmationManager.
+        # -----------------------------------------------------
+
+        if confirmation_manager.has_pending:
+            await handle_confirmation_response(
+                text
+            )
+            return
+
+        # -----------------------------------------------------
+        # Normal command execution
+        # -----------------------------------------------------
+
+        controller.set_state(
+            AssistantState.EXECUTING
+        )
+
+        try:
+            result = await asyncio.to_thread(
+                command_router.route,
+                text,
+            )
+
+        except Exception as exc:
+            print(
+                "[Execution Error] "
+                "Command execution failed: "
+                f"{exc}"
+            )
+
+            response = (
+                "Something went wrong while "
+                "executing that command."
+            )
+
+            await speak_response(
+                response
+            )
+
+            return
+
+        # -----------------------------------------------------
+        # Execution result
+        # -----------------------------------------------------
+
+        if result.success:
+            print(
+                "[Execution] Success: "
+                f"{result.message}"
+            )
+
+            await speak_response(
+                result.message
+            )
+
+            return
+
+        print(
+            "[Execution] Failed: "
+            f"{result.message}"
+        )
+
+        # -----------------------------------------------------
+        # CONFIRMATION REQUIRED
+        # -----------------------------------------------------
+
+        if (
+            result.data
+            and result.data.get("type")
+            == "confirmation_required"
+        ):
+            action = result.data.get(
+                "action"
+            )
+
+            arguments = result.data.get(
+                "arguments",
+                {},
+            )
+
+            # -------------------------------------------------
+            # Validate confirmation payload.
+            # -------------------------------------------------
+
+            if not action:
+                print(
+                    "[Confirmation Error] "
+                    "Missing action."
+                )
+
+                await speak_response(
+                    "I couldn't safely prepare that confirmation."
+                )
+
+                return
+
+            if not isinstance(
+                arguments,
+                dict,
+            ):
+                print(
+                    "[Confirmation Error] "
+                    "Invalid arguments."
+                )
+
+                await speak_response(
+                    "I couldn't safely prepare that confirmation."
+                )
+
+                return
+
+            # -------------------------------------------------
+            # Store pending action.
+            # -------------------------------------------------
+
+            confirmation_result = (
+                confirmation_manager.request(
+                    action=action,
+                    arguments=arguments,
+                    prompt=result.message,
+                )
+            )
+
+            # -------------------------------------------------
+            # Speak confirmation request.
+            #
+            # Do NOT return to wake-word mode afterward.
+            # -------------------------------------------------
+
+            await speak_response(
+                confirmation_result.message,
+                return_to_idle=False,
+            )
+
+            return
+
+        # -----------------------------------------------------
+        # Normal failure.
+        # -----------------------------------------------------
+
+        await speak_response(
+            result.message
+        )
 
     bus.subscribe(
         "command_recognized",
         handle_command_recognized,
     )
 
-    # ---------------------------------------------------------
-    # Return to Wake Word Mode
-    # ---------------------------------------------------------
+    # =========================================================
+    # CONFIRMATION RESPONSE
+    # =========================================================
 
-    async def reset_listening(payload):
+    async def handle_confirmation_response(
+        text: str,
+    ) -> None:
         """
-        Resume background wake-word detection after STT
-        processing has finished.
+        Process a response to the currently pending action.
         """
+
+        if not confirmation_manager.has_pending:
+            print(
+                "[Confirmation] "
+                "No pending confirmation."
+            )
+
+            await speak_response(
+                "There is nothing waiting for confirmation."
+            )
+
+            return
 
         print(
-            "[System] Returning to wake-word mode..."
+            "[Confirmation] Response: "
+            f"{text}"
         )
 
-        wake_word_engine.resume_listening()
+        controller.set_state(
+            AssistantState.EXECUTING
+        )
 
-        mic.start(
-            callback=wake_word_engine.process_audio_chunk
+        try:
+            result = await asyncio.to_thread(
+                confirmation_manager.handle_response,
+                text,
+            )
+
+        except Exception as exc:
+            print(
+                "[Confirmation Error] "
+                f"Failed to process confirmation: {exc}"
+            )
+
+            await speak_response(
+                "Something went wrong while processing "
+                "the confirmation."
+            )
+
+            return
+
+        # -----------------------------------------------------
+        # Result
+        # -----------------------------------------------------
+
+        if result.success:
+            print(
+                "[Confirmation] Approved and executed: "
+                f"{result.message}"
+            )
+
+        else:
+            print(
+                "[Confirmation] "
+                f"{result.message}"
+            )
+
+        # -----------------------------------------------------
+        # Speak result and return to normal mode.
+        # -----------------------------------------------------
+
+        await speak_response(
+            result.message
         )
 
     bus.subscribe(
-        "stt_finished",
-        reset_listening,
+        "confirmation_response",
+        lambda payload: handle_confirmation_response(
+            payload.get("text", "").strip()
+        ),
     )
 
-    # ---------------------------------------------------------
-    # System Boot
-    # ---------------------------------------------------------
+    # =========================================================
+    # FAILED INTERACTION
+    # =========================================================
+
+    async def handle_interaction_failed(payload):
+        """
+        Recover safely when voice capture or STT fails.
+
+        If confirmation was pending, it remains pending so the
+        user can try again rather than accidentally cancelling
+        the requested action.
+        """
+
+        if (
+            controller.get_state()
+            == AssistantState.SHUTTING_DOWN
+        ):
+            return
+
+        # -----------------------------------------------------
+        # If confirmation is still pending, return to the
+        # waiting state instead of clearing it.
+        # -----------------------------------------------------
+
+        if confirmation_manager.has_pending:
+            controller.set_state(
+                AssistantState.WAITING_FOR_CONFIRMATION
+            )
+
+            print(
+                "[System] Confirmation response failed."
+            )
+
+            print(
+                "[System] Still waiting for confirmation..."
+            )
+
+            return
+
+        # -----------------------------------------------------
+        # Normal interaction failure.
+        # -----------------------------------------------------
+
+        controller.set_state(
+            AssistantState.IDLE
+        )
+
+        print(
+            "[System] Interaction failed. "
+            "Returning to wake-word mode..."
+        )
+
+        resume_wake_mode()
+
+    bus.subscribe(
+        "interaction_failed",
+        handle_interaction_failed,
+    )
+
+    # =========================================================
+    # START
+    # =========================================================
 
     print(
         "[System] Starting wake-word listener..."
     )
 
     mic.start(
-        callback=wake_word_engine.process_audio_chunk
+        callback=(
+            wake_word_engine.process_audio_chunk
+        )
     )
 
+    # =========================================================
+    # MAIN LOOP
+    # =========================================================
+
     try:
-        # Keep asyncio event loop alive
         while True:
             await asyncio.sleep(1)
 
@@ -304,18 +1084,56 @@ async def main():
 
     except KeyboardInterrupt:
         print(
-            "\nShutting down Vox OS safely..."
+            "\n[System] Shutdown requested..."
         )
 
     finally:
-        print("[System] Cleaning up...")
+        controller.shutdown()
 
-        mic.stop()
-        voice_engine.stop()
-        tts_engine.stop()
-        hotkey_listener.stop()
+        print(
+            "[System] Cleaning up..."
+        )
 
-        print("[System] Vox OS stopped.")
+        try:
+            mic.stop()
+
+        except Exception as exc:
+            print(
+                f"[Cleanup] Microphone: {exc}"
+            )
+
+        try:
+            voice_engine.stop()
+
+        except Exception as exc:
+            print(
+                f"[Cleanup] Voice engine: {exc}"
+            )
+
+        try:
+            tts_engine.stop()
+
+        except Exception as exc:
+            print(
+                f"[Cleanup] TTS: {exc}"
+            )
+
+        try:
+            hotkey_listener.stop()
+
+        except Exception as exc:
+            print(
+                f"[Cleanup] Hotkey: {exc}"
+            )
+
+        print(
+            "[System] Vox OS stopped."
+        )
+
+
+# =============================================================
+# ENTRY POINT
+# =============================================================
 
 
 if __name__ == "__main__":

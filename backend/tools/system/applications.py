@@ -1,67 +1,30 @@
 from __future__ import annotations
 
 import os
-import shutil
 import subprocess
 from typing import Any
 
 from tools.base import Tool, ToolResult
+from tools.system.application_registry import ApplicationRegistry
 
 
 class OpenApplicationTool(Tool):
     """
-    Opens a supported Windows application.
+    Opens a discovered Windows application.
 
-    Responsibilities:
-        - Resolve application aliases
-        - Find the application executable
-        - Launch the application
-        - Return a structured ToolResult
+    Application resolution is handled by ApplicationRegistry.
+    This tool is responsible only for validating and launching
+    the resolved executable.
     """
 
     name = "open_application"
-    description = "Open a Windows application."
+    description = "Open an installed Windows application."
 
-    # ---------------------------------------------------------
-    # Supported Applications
-    # ---------------------------------------------------------
-
-    APPLICATIONS = {
-        "chrome": [
-            "chrome.exe",
-            r"C:\Program Files\Google\Chrome\Application\chrome.exe",
-            r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
-        ],
-        "notepad": [
-            "notepad.exe",
-        ],
-        "calculator": [
-            "calc.exe",
-        ],
-    }
-
-    # ---------------------------------------------------------
-    # Speech / User Aliases
-    # ---------------------------------------------------------
-
-    ALIASES = {
-        # Chrome
-        "google chrome": "chrome",
-        "chrome browser": "chrome",
-
-        # Notepad
-        "note pad": "notepad",
-        "note pattern": "notepad",
-        "notepad": "notepad",
-
-        # Calculator
-        "calc": "calculator",
-        "windows calculator": "calculator",
-    }
-
-    # ---------------------------------------------------------
-    # Execution
-    # ---------------------------------------------------------
+    def __init__(
+        self,
+        registry: ApplicationRegistry,
+    ) -> None:
+        self.registry = registry
 
     def execute(
         self,
@@ -69,143 +32,108 @@ class OpenApplicationTool(Tool):
         **kwargs: Any,
     ) -> ToolResult:
         """
-        Open the requested application.
+        Resolve and launch an application.
+
+        Args:
+            application:
+                Application name or alias supplied by the router.
         """
 
-        # -----------------------------------------------------
-        # Normalize application name
-        # -----------------------------------------------------
+        query = application.strip()
 
-        application = application.strip().lower()
-
-        if not application:
+        if not query:
             return ToolResult(
                 success=False,
                 message="No application was specified.",
             )
 
         # -----------------------------------------------------
-        # Resolve aliases
+        # Resolve application
         # -----------------------------------------------------
 
-        application = self.ALIASES.get(
-            application,
-            application,
-        )
+        app = self.registry.get(query)
 
-        print(
-            f"[Application] Resolved application: "
-            f"{application}"
-        )
-
-        # -----------------------------------------------------
-        # Find application configuration
-        # -----------------------------------------------------
-
-        candidates = self.APPLICATIONS.get(
-            application
-        )
-
-        if candidates is None:
+        if app is None:
             return ToolResult(
                 success=False,
                 message=(
-                    f"I don't know how to open "
-                    f"{application} yet."
+                    f"I couldn't find an application "
+                    f"called {query}."
+                ),
+            )
+
+        executable = app.executable
+
+        print(
+            f"[Application] Resolved: "
+            f"{app.name}"
+        )
+
+        print(
+            f"[Application] Executable: "
+            f"{executable}"
+        )
+
+        # -----------------------------------------------------
+        # Validate executable
+        # -----------------------------------------------------
+
+        if not os.path.isfile(executable):
+            return ToolResult(
+                success=False,
+                message=(
+                    f"{app.name} is no longer available "
+                    "at its discovered location."
+                ),
+            )
+
+        if not executable.lower().endswith(".exe"):
+            return ToolResult(
+                success=False,
+                message=(
+                    f"{app.name} does not have a valid "
+                    "Windows executable."
                 ),
             )
 
         # -----------------------------------------------------
-        # Try each executable candidate
+        # Launch application
         # -----------------------------------------------------
 
-        for candidate in candidates:
+        try:
+            subprocess.Popen(
+                [executable],
+                close_fds=True,
+            )
 
-            try:
-                # -------------------------------------------------
-                # Absolute executable path
-                # -------------------------------------------------
+        except OSError as exc:
+            print(
+                f"[Application Error] "
+                f"Failed to launch {app.name}: {exc}"
+            )
 
-                if os.path.isabs(candidate):
+            return ToolResult(
+                success=False,
+                message=(
+                    f"I couldn't open {app.name}."
+                ),
+                data={
+                    "application": app.name,
+                    "executable": executable,
+                    "error": str(exc),
+                },
+            )
 
-                    if not os.path.exists(candidate):
-                        continue
-
-                    subprocess.Popen(
-                        [candidate],
-                        close_fds=True,
-                    )
-
-                    print(
-                        f"[Application] "
-                        f"Launched: {application}"
-                    )
-
-                    return ToolResult(
-                        success=True,
-                        message=(
-                            f"{application} is open."
-                        ),
-                        data={
-                            "application": application,
-                            "executable": candidate,
-                        },
-                    )
-
-                # -------------------------------------------------
-                # Search executable in PATH
-                # -------------------------------------------------
-
-                executable = shutil.which(
-                    candidate
-                )
-
-                if executable:
-
-                    subprocess.Popen(
-                        [executable],
-                        close_fds=True,
-                    )
-
-                    print(
-                        f"[Application] "
-                        f"Launched: {application}"
-                    )
-
-                    return ToolResult(
-                        success=True,
-                        message=(
-                            f"{application} is open."
-                        ),
-                        data={
-                            "application": application,
-                            "executable": executable,
-                        },
-                    )
-
-            except OSError as exc:
-
-                print(
-                    f"[Application Error] "
-                    f"{application}: {exc}"
-                )
-
-                return ToolResult(
-                    success=False,
-                    message=(
-                        f"Failed to open "
-                        f"{application}: {exc}"
-                    ),
-                )
-
-        # ---------------------------------------------------------
-        # Application not found
-        # ---------------------------------------------------------
+        print(
+            f"[Application] Launched: "
+            f"{app.name}"
+        )
 
         return ToolResult(
-            success=False,
-            message=(
-                f"{application} was not found "
-                "on this computer."
-            ),
+            success=True,
+            message=f"{app.name} is open.",
+            data={
+                "application": app.name,
+                "executable": executable,
+            },
         )
