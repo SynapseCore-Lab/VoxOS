@@ -7,22 +7,10 @@ from tools.system.audio import WindowsAudioController
 
 
 class VolumeControlTool(Tool):
-    """
-    High-level volume control tool.
-
-    Supported operations:
-    - up
-    - down
-    - set
-    - mute
-    - unmute
-    """
-
     name = "volume_control"
-
     description = (
         "Control Windows master volume: increase, decrease, "
-        "set percentage, mute, or unmute."
+        "set percentage, mute, unmute, or get current volume."
     )
 
     def __init__(
@@ -42,93 +30,138 @@ class VolumeControlTool(Tool):
         operation = operation.strip().lower()
 
         try:
+            # -------------------------
+            # GET CURRENT VOLUME
+            # -------------------------
+
+            if operation == "get":
+                volume = self.controller.get_volume()
+                muted = self.controller.is_muted()
+
+                if muted:
+                    message = (
+                        f"Volume is at {volume}%, "
+                        "and the system is muted."
+                    )
+                else:
+                    message = f"Volume is at {volume}%."
+
+                return ToolResult(
+                    True,
+                    message,
+                    {
+                        "operation": operation,
+                        "volume": volume,
+                        "muted": muted,
+                    },
+                )
+
+            # -------------------------
+            # VOLUME UP
+            # -------------------------
+
             if operation == "up":
                 volume = self.controller.volume_up(step)
 
                 return ToolResult(
-                    success=True,
-                    message=f"Volume increased to {volume}%.",
-                    data={
+                    True,
+                    f"Volume increased to {volume}%.",
+                    {
                         "operation": operation,
                         "volume": volume,
                         "muted": self.controller.is_muted(),
                     },
                 )
+
+            # -------------------------
+            # VOLUME DOWN
+            # -------------------------
 
             if operation == "down":
                 volume = self.controller.volume_down(step)
 
                 return ToolResult(
-                    success=True,
-                    message=f"Volume decreased to {volume}%.",
-                    data={
+                    True,
+                    f"Volume decreased to {volume}%.",
+                    {
                         "operation": operation,
                         "volume": volume,
                         "muted": self.controller.is_muted(),
                     },
                 )
 
+            # -------------------------
+            # SET VOLUME
+            # -------------------------
+
             if operation == "set":
                 if percentage is None:
                     return ToolResult(
-                        success=False,
-                        message="No volume percentage was provided.",
+                        False,
+                        "No volume percentage was provided.",
                     )
 
                 volume = self.controller.set_volume(percentage)
 
                 return ToolResult(
-                    success=True,
-                    message=f"Volume set to {volume}%.",
-                    data={
+                    True,
+                    f"Volume set to {volume}%.",
+                    {
                         "operation": operation,
                         "volume": volume,
                         "muted": self.controller.is_muted(),
                     },
                 )
 
+            # -------------------------
+            # MUTE
+            # -------------------------
+
             if operation == "mute":
                 self.controller.mute()
 
                 return ToolResult(
-                    success=True,
-                    message="Volume muted.",
-                    data={
+                    True,
+                    "Volume muted.",
+                    {
                         "operation": operation,
                         "volume": self.controller.get_volume(),
                         "muted": True,
                     },
                 )
 
+            # -------------------------
+            # UNMUTE
+            # -------------------------
+
             if operation == "unmute":
                 self.controller.unmute()
 
                 return ToolResult(
-                    success=True,
-                    message="Volume unmuted.",
-                    data={
+                    True,
+                    "Volume unmuted.",
+                    {
                         "operation": operation,
                         "volume": self.controller.get_volume(),
                         "muted": False,
                     },
                 )
 
+            # -------------------------
+            # UNKNOWN OPERATION
+            # -------------------------
+
             return ToolResult(
-                success=False,
-                message=f"Unknown volume operation: {operation}.",
+                False,
+                f"Unknown volume operation: {operation}.",
             )
 
         except ValueError as exc:
-            return ToolResult(
-                success=False,
-                message=str(exc),
-            )
+            return ToolResult(False, str(exc))
 
         except Exception as exc:
             return ToolResult(
-                success=False,
-                message="I couldn't control the Windows volume.",
-                data={
-                    "error": str(exc),
-                },
+                False,
+                "I couldn't control the Windows volume.",
+                {"error": str(exc)},
             )
