@@ -21,10 +21,13 @@ from execution.router import CommandRouter
 from execution.confirmation import ConfirmationManager
 from execution.application_intent import ApplicationIntentResolver
 from tools.registry import ToolRegistry
+from execution.system_router import SystemCommandRouter
+from execution.normalizer import CommandNormalizer
 
 # Application System
 from tools.system.application_registry import ApplicationRegistry
 from tools.system.applications import OpenApplicationTool
+from tools.system.volume import VolumeControlTool
 
 
 os.environ["HF_HUB_DISABLE_SYMLINKS_WARNING"] = "1"
@@ -317,13 +320,24 @@ async def main():
     # =========================================================
 
     tool_registry = ToolRegistry()
-
     open_application_tool = OpenApplicationTool(
         application_registry
     )
 
+    volume_control_tool = VolumeControlTool()
+
     tool_registry.register(
         open_application_tool
+    )
+
+    tool_registry.register(
+        volume_control_tool
+    )
+
+    command_normalizer = CommandNormalizer()
+
+    command_router_resolver = ApplicationIntentResolver(
+        application_registry
     )
 
     # =========================================================
@@ -331,9 +345,21 @@ async def main():
     # =========================================================
 
     command_router = CommandRouter(
-    registry=tool_registry,
-    application_resolver=command_router_resolver,
-)
+        registry=tool_registry,
+        application_resolver=command_router_resolver,
+    )
+
+    # =========================================================
+    # SYSTEM COMMAND ROUTER
+    # =========================================================
+
+    system_router = SystemCommandRouter(
+        tool_registry
+    )
+
+    print(
+        "[System Router] Deterministic system command router initialized."
+    )
 
     # =========================================================
     # CONFIRMATION MANAGER
@@ -785,10 +811,33 @@ async def main():
         )
 
         try:
-            result = await asyncio.to_thread(
-                command_router.route,
-                text,
+            # -------------------------------------------------
+            # Deterministic system commands first.
+            # Simple commands such as volume control bypass
+            # the slower application/LLM path.
+            # -------------------------------------------------
+
+            normalized_text = command_normalizer.normalize(text)
+
+            print(
+                f"[Router] Normalized: {normalized_text}"
             )
+
+            result = await asyncio.to_thread(
+                system_router.route,
+                normalized_text,
+            )
+
+            # -------------------------------------------------
+            # Fall back to the existing command router when the
+            # system router does not recognize the command.
+            # -------------------------------------------------
+
+            if result is None:
+                result = await asyncio.to_thread(
+                    command_router.route,
+                    normalized_text,
+                )
 
         except Exception as exc:
             print(
